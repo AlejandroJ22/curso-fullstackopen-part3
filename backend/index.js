@@ -42,6 +42,9 @@ app.get('/api/persons/:id', (req, res) => {
         } else {
             res.status(404).send({ error: 'Person not found' })
         }
+    }).catch(error => {
+      console.log(error)
+      res.status(500).end()
     })
 })
 
