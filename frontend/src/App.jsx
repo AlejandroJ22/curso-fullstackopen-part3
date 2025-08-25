@@ -150,8 +150,8 @@ const App = () => {
           setNotificationState(null)
         }, 5000)
       }).catch(error => {
-        console.error('Error creating person:', error)
-        setNotificationMessage('Error creating person')
+        console.error('Error creating person:', error.response.data.error)
+        setNotificationMessage(`Error creating person: ${error.response.data.error}`)
         setNotificationState('error')
         setTimeout(() => {
           setNotificationState(null)

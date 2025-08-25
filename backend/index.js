@@ -34,18 +34,14 @@ app.get('/info', (req, res) => {
   })
 })
 
-app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    Person.findById(id).then(person => {
-        if (person) {
-            res.json(person)
-        } else {
-            res.status(404).send({ error: 'Person not found' })
-        }
-    }).catch(error => {
-      console.log(error)
-      res.status(500).end()
-    })
+app.get('/api/persons/:id', (req, res, next) => {
+  Person.findById(req.params.id).then(person => {
+      if (person) {
+          res.json(person)
+      } else {
+          res.status(404).send({ error: 'Person not found' })
+      }
+  }).catch(error => next(error))
 })
 
 // const generateId = () => {
@@ -53,26 +49,57 @@ app.get('/api/persons/:id', (req, res) => {
 //   return Math.floor(Math.random() * 1000000)
 // }
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
   const person = new Person(req.body)
   person.save().then(savedPerson => {
     res.status(201).json(savedPerson)
-  }).catch(error => {
-    console.error(error)
-    res.status(400).send({ error: 'Invalid data' })
-  })
+  }).catch(error => next(error))
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-  const id = req.params.id
-  Person.findByIdAndRemove(id).then(result => {
+app.put('/api/persons/:id', (req, res, next) => {
+  const person = req.body
+  Person.findByIdAndUpdate(req.params.id, person, { new: true, runValidators: true })
+    .then(updatedPerson => {
+      if (updatedPerson) {
+        res.json(updatedPerson)
+      } else {
+        res.status(404).send({ error: 'Person not found' })
+      }
+    })
+    .catch(error => next(error))
+})
+
+app.delete('/api/persons/:id', (req, res, next) => {
+  Person.findByIdAndDelete(req.params.id).then(result => {
     if (result) {
       res.status(204).end()
     } else {
       res.status(404).send({ error: 'Person not found' })
     }
-  })
+  }).catch(error => next(error))
 })
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
+}
+
+// controlador de solicitudes con endpoint desconocido
+app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+  }
+
+  next(error)
+}
+
+// este debe ser el último middleware cargado, ¡también todas las rutas deben ser registrada antes que esto!
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
